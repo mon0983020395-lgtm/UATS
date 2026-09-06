@@ -17,6 +17,7 @@ export async function GET() {
       orderBy: { created_at: 'desc' },
       include: {
         _count: { select: { attendance_logs: true } },
+        sessions: { orderBy: { start_time: 'asc' } },
       },
     })
     return NextResponse.json({ success: true, data: events })

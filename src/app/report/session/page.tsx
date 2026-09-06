@@ -12,6 +12,7 @@ export default function SessionReportPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [events, setEvents] = useState<any[]>([])
   const [selectedEvent, setSelectedEvent] = useState('')
+  const [selectedSession, setSelectedSession] = useState('')
   const [showAbsent, setShowAbsent] = useState(false)
 
   useEffect(() => {
@@ -22,12 +23,13 @@ export default function SessionReportPage() {
     setLoading(true)
     let url = `/api/report/session?date=${date}`
     if (selectedEvent) url += `&event_id=${selectedEvent}`
+    if (selectedSession) url += `&session_id=${selectedSession}`
     fetch(url).then(r => r.json()).then(j => {
       if (j.success) setData(j.data)
     }).finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchReport() }, [date, selectedEvent])
+  useEffect(() => { fetchReport() }, [date, selectedEvent, selectedSession])
 
   const handleExport = () => {
     if (!data) return
@@ -80,7 +82,10 @@ export default function SessionReportPage() {
           <label className="block text-xs font-medium text-gray-600 mb-1">กิจกรรม</label>
           <select
             value={selectedEvent}
-            onChange={e => setSelectedEvent(e.target.value)}
+            onChange={e => {
+              setSelectedEvent(e.target.value)
+              setSelectedSession('')
+            }}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-100 focus:border-pink-400 outline-none bg-white"
           >
             <option value="">ทั้งหมด</option>
@@ -89,6 +94,22 @@ export default function SessionReportPage() {
             ))}
           </select>
         </div>
+        
+        {selectedEvent && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">รอบ (Session)</label>
+            <select
+              value={selectedSession}
+              onChange={e => setSelectedSession(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-100 focus:border-pink-400 outline-none bg-white min-w-[150px]"
+            >
+              <option value="">ทุกรอบในกิจกรรมนี้</option>
+              {events.find(ev => ev.id.toString() === selectedEvent)?.sessions?.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name} ({format(new Date(s.start_time), 'HH:mm')} - {format(new Date(s.end_time), 'HH:mm')})</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex items-center gap-2 pb-1">
           <input type="checkbox" id="showAbsent" checked={showAbsent} onChange={e => setShowAbsent(e.target.checked)} className="rounded" />
           <label htmlFor="showAbsent" className="text-sm text-gray-700 cursor-pointer">แสดงเฉพาะผู้ขาด</label>
@@ -158,8 +179,14 @@ export default function SessionReportPage() {
                         <td className="px-5 py-3 text-gray-900">{a.student.first_name} {a.student.last_name}</td>
                         <td className="px-5 py-3 text-gray-500 text-xs">{a.student.department}</td>
                         <td className="px-5 py-3 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${a.attended ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {a.attended ? '🟢 เข้าร่วม' : '⚫ ขาด'}
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            a.attended 
+                              ? a.is_late 
+                                ? 'bg-orange-100 text-orange-700' 
+                                : 'bg-green-50 text-green-700' 
+                              : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {a.attended ? (a.is_late ? '⚠️ เข้าสาย' : '🟢 เข้าร่วม') : '⚫ ขาด'}
                           </span>
                         </td>
                         <td className="px-5 py-3 text-center text-gray-600 text-xs">

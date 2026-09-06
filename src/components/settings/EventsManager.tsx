@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import SessionManager from './SessionManager'
 
 interface MeditationEvent {
   id: number
@@ -213,38 +214,42 @@ export default function EventsManager() {
           {events.map(event => (
             <div
               key={event.id}
-              className={`bg-white border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${event.is_active ? 'border-pink-300 shadow-sm ring-1 ring-pink-200' : 'border-gray-200'}`}
+              className={`bg-white border rounded-xl p-4 flex flex-col gap-2 ${event.is_active ? 'border-pink-300 shadow-sm ring-1 ring-pink-200' : 'border-gray-200'}`}
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-gray-900">{event.name}</h3>
-                  {event.is_active && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                      🟢 กำลังดำเนินอยู่
-                    </span>
-                  )}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-gray-900">{event.name}</h3>
+                    {event.is_active && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                        🟢 กำลังดำเนินอยู่
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {format(new Date(event.start_date), 'd MMM yyyy', { locale: th })} –{' '}
+                    {format(new Date(event.end_date), 'd MMM yyyy', { locale: th })}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    ⏱ ต้องการ <strong>{event.required_hours}</strong> ชั่วโมง &nbsp;|&nbsp;
+                    📋 บันทึกการสแกน <strong>{event._count?.attendance_logs ?? 0}</strong> รายการ
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {format(new Date(event.start_date), 'd MMM yyyy', { locale: th })} –{' '}
-                  {format(new Date(event.end_date), 'd MMM yyyy', { locale: th })}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  ⏱ ต้องการ <strong>{event.required_hours}</strong> ชั่วโมง &nbsp;|&nbsp;
-                  📋 บันทึกการสแกน <strong>{event._count?.attendance_logs ?? 0}</strong> รายการ
-                </p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {!event.is_active && (
+                    <button
+                      onClick={() => handleSetActive(event)}
+                      className="text-xs px-3 py-1.5 border border-green-400 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    >
+                      ตั้งเป็นกิจกรรมปัจจุบัน
+                    </button>
+                  )}
+                  <button onClick={() => openEdit(event)} className="text-xs px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">✏️ แก้ไข</button>
+                  <button onClick={() => handleDelete(event.id)} className="text-xs px-3 py-1.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors">🗑 ลบ</button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!event.is_active && (
-                  <button
-                    onClick={() => handleSetActive(event)}
-                    className="text-xs px-3 py-1.5 border border-green-400 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                  >
-                    ตั้งเป็นกิจกรรมปัจจุบัน
-                  </button>
-                )}
-                <button onClick={() => openEdit(event)} className="text-xs px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">✏️ แก้ไข</button>
-                <button onClick={() => handleDelete(event.id)} className="text-xs px-3 py-1.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors">🗑 ลบ</button>
-              </div>
+              
+              <SessionManager eventId={event.id} />
             </div>
           ))}
         </div>

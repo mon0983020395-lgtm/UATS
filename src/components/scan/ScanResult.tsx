@@ -58,11 +58,19 @@ export default function ScanResultDisplay({ result, error, cooldown, onReset }: 
         >
           {isIn ? '✔ เข้า' : '✔ ออก'}
         </div>
+        {result.is_late && isIn && (
+          <div className="inline-block px-4 py-1.5 ml-2 rounded-full text-sm font-bold mb-4 bg-orange-100 text-orange-600 border border-orange-200">
+            ⚠️ เข้าสาย
+          </div>
+        )}
         <h3 className="text-2xl font-bold text-gray-900 mb-1">
           {result.student.first_name} {result.student.last_name}
         </h3>
         <p className="text-gray-500 mb-1">รหัสนิสิต: {result.student.student_id}</p>
         <p className="text-gray-500 text-sm mb-1">{result.student.department}</p>
+        {result.session && (
+          <p className="text-pink-600 text-sm font-medium mb-1">📍 รอบ: {result.session.name}</p>
+        )}
         <p className="text-gray-400 text-sm">
           {format(new Date(result.scanned_at), 'dd MMMM yyyy HH:mm:ss', { locale: th })}
         </p>

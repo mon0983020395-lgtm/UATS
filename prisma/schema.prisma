@@ -8,16 +8,16 @@ datasource db {
 }
 
 model Student {
-  id          Int              @id @default(autoincrement())
-  student_id  String           @unique @db.VarChar(20)
-  first_name  String           @db.VarChar(100)
-  last_name   String           @db.VarChar(100)
-  department  String           @db.VarChar(150)
-  year        Int?             @db.TinyInt
-  email       String?          @db.VarChar(150)
-  qr_token    String           @unique @db.VarChar(36)
-  created_at  DateTime         @default(now())
-  updated_at  DateTime         @updatedAt
+  id         Int      @id @default(autoincrement())
+  student_id String   @unique @db.VarChar(20)
+  first_name String   @db.VarChar(100)
+  last_name  String   @db.VarChar(100)
+  department String   @db.VarChar(150)
+  year       Int?     @db.TinyInt
+  email      String?  @db.VarChar(150)
+  qr_token   String   @unique @db.VarChar(36)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   attendance_logs AttendanceLog[]
 
@@ -28,37 +28,59 @@ model Student {
 }
 
 model AttendanceLog {
-  id          Int           @id @default(autoincrement())
-  student_id  Int
-  scan_type   ScanType
-  scanned_at  DateTime      @default(now())
-  event_id    Int?
+  id         Int      @id @default(autoincrement())
+  student_id Int
+  scan_type  ScanType
+  scanned_at DateTime @default(now())
+  event_id   Int?
+  session_id Int?
+  is_late    Boolean  @default(false)
 
-  student     Student           @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  event       MeditationEvent?  @relation(fields: [event_id], references: [id], onDelete: SetNull)
+  student Student          @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  event   MeditationEvent? @relation(fields: [event_id], references: [id], onDelete: SetNull)
+  session EventSession?    @relation(fields: [session_id], references: [id], onDelete: SetNull)
 
   @@index([student_id])
   @@index([scanned_at])
   @@index([student_id, scanned_at])
   @@index([event_id])
+  @@index([session_id])
   @@map("attendance_logs")
 }
 
 model MeditationEvent {
-  id             Int       @id @default(autoincrement())
-  name           String    @db.VarChar(200)
-  description    String?   @db.Text
+  id             Int      @id @default(autoincrement())
+  name           String   @db.VarChar(200)
+  description    String?  @db.Text
   start_date     DateTime
   end_date       DateTime
-  required_hours Float     @default(0)
-  is_active      Boolean   @default(false)
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  required_hours Float    @default(0)
+  is_active      Boolean  @default(false)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
 
   attendance_logs AttendanceLog[]
+  sessions        EventSession[]
 
   @@index([is_active])
   @@map("meditation_events")
+}
+
+model EventSession {
+  id         Int      @id @default(autoincrement())
+  event_id   Int
+  name       String   @db.VarChar(200)
+  start_time DateTime
+  end_time   DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  event MeditationEvent @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  logs  AttendanceLog[]
+
+  @@index([event_id])
+  @@index([start_time, end_time])
+  @@map("event_sessions")
 }
 
 enum ScanType {

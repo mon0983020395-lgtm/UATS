@@ -53,11 +53,14 @@ export async function POST(request: NextRequest) {
       orderBy: { scanned_at: 'desc' },
     })
 
-    // Check cooldown
+    // Check cooldown (only within same day to prevent cross-day blocking)
     if (lastLog) {
       const now = new Date()
       const diff = (now.getTime() - lastLog.scanned_at.getTime()) / 1000
-      if (diff < COOLDOWN_SECONDS) {
+      const sameDay =
+        lastLog.scanned_at.toDateString() === now.toDateString()
+
+      if (sameDay && diff < COOLDOWN_SECONDS) {
         const remaining = Math.ceil(COOLDOWN_SECONDS - diff)
         return NextResponse.json(
           {
@@ -71,12 +74,55 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine scan type: IN/OUT toggle
-    const scan_type = lastLog?.scan_type === 'IN' ? 'OUT' : 'IN'
+    // If last log was IN → next is OUT, otherwise IN
+    // Special case: if last log was yesterday's OUT → today starts fresh with IN
+    let scan_type: 'IN' | 'OUT'
+    if (lastLog?.scan_type === 'IN') {
+      scan_type = 'OUT'
+    } else {
+      scan_type = 'IN'
+    }
+
+    // Find active event to associate with this scan
+    const now = new Date()
+    const activeEvent = await prisma.meditationEvent.findFirst({
+      where: {
+        is_active: true,
+        start_date: { lte: now },
+        end_date: { gte: now },
+      },
+    })
+
+    // Find active session for this event (allowing scan 30 mins before start and 30 mins after end)
+    let activeSession = null
+    let is_late = false
+    
+    if (activeEvent) {
+      activeSession = await prisma.eventSession.findFirst({
+        where: {
+          event_id: activeEvent.id,
+          start_time: { lte: new Date(now.getTime() + 30 * 60000) },
+          end_time: { gte: new Date(now.getTime() - 30 * 60000) },
+        },
+        orderBy: { start_time: 'asc' } // prioritize earlier session if overlap
+      })
+
+      // Calculate "Late" if scanning IN and it's 15+ minutes past session start_time
+      if (activeSession && scan_type === 'IN') {
+        const gracePeriodEnd = new Date(activeSession.start_time.getTime() + 15 * 60000)
+        if (now > gracePeriodEnd) {
+          is_late = true
+        }
+      }
+    }
 
     const log = await prisma.attendanceLog.create({
       data: {
         student_id: student.id,
         scan_type,
+        // Link to active event and session if they exist
+        ...(activeEvent ? { event_id: activeEvent.id } : {}),
+        ...(activeSession ? { session_id: activeSession.id, is_late } : {}),
       },
     })
 
@@ -85,6 +131,9 @@ export async function POST(request: NextRequest) {
       data: {
         scan_type,
         scanned_at: log.scanned_at,
+        is_late,
+        event: activeEvent ? { id: activeEvent.id, name: activeEvent.name } : null,
+        session: activeSession ? { id: activeSession.id, name: activeSession.name } : null,
         student: {
           student_id: student.student_id,
           first_name: student.first_name,
@@ -99,3 +148,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'เกิดข้อผิดพลาดในการสแกน' }, { status: 500 })
   }
 }
+

@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const dateStr = searchParams.get('date')
     const eventId = searchParams.get('event_id') ? parseInt(searchParams.get('event_id')!) : null
+    const sessionId = searchParams.get('session_id') ? parseInt(searchParams.get('session_id')!) : null
 
     const targetDate = dateStr ? parseISO(dateStr) : new Date()
     const dayStart = startOfDay(targetDate)
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
       scanned_at: { gte: dayStart, lte: dayEnd },
     }
     if (eventId) logsWhere.event_id = eventId
+    if (sessionId) logsWhere.session_id = sessionId
 
     const logs = await prisma.attendanceLog.findMany({
       where: logsWhere,
@@ -45,6 +47,7 @@ export async function GET(request: NextRequest) {
       const firstIn = studentLogs.find(l => l.scan_type === 'IN')
       const lastOut = [...studentLogs].reverse().find(l => l.scan_type === 'OUT')
       const attended = studentLogs.some(l => l.scan_type === 'IN')
+      const is_late = firstIn?.is_late ?? false
 
       let duration_minutes = 0
       if (firstIn && lastOut) {
@@ -58,6 +61,7 @@ export async function GET(request: NextRequest) {
         last_out: lastOut?.scanned_at ?? null,
         duration_minutes,
         scan_count: studentLogs.length,
+        is_late,
       }
     })
 

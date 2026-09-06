@@ -1,4 +1,4 @@
-﻿export type ScanType = 'IN' | 'OUT'
+export type ScanType = 'IN' | 'OUT'
 
 export interface Student {
   id: number
@@ -13,12 +13,27 @@ export interface Student {
   updated_at: string
 }
 
+export interface EventSession {
+  id: number
+  event_id: number
+  name: string
+  start_time: string
+  end_time: string
+  created_at: string
+  updated_at: string
+}
+
 export interface AttendanceLog {
   id: number
   student_id: number
   scan_type: ScanType
   scanned_at: string
+  event_id: number | null
+  session_id: number | null
+  is_late: boolean
   student?: Student
+  event?: MeditationEvent
+  session?: EventSession
 }
 
 export interface DashboardStats {
@@ -51,6 +66,9 @@ export interface RecentScan {
 export interface ScanResult {
   scan_type: ScanType
   scanned_at: string
+  is_late: boolean
+  event?: { id: number; name: string } | null
+  session?: { id: number; name: string } | null
   student: {
     student_id: string
     first_name: string
