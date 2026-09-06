@@ -9,6 +9,8 @@ const navLinks = [
   { href: '/scan', label: '📷 สแกน QR Code' },
   { href: '/students', label: '👥 นิสิต' },
   { href: '/history', label: '📅 ประวัติ' },
+  { href: '/report/session', label: '📋 รายงานวัน' },
+  { href: '/report/group', label: '📈 รายงานกลุ่ม' },
   { href: '/settings', label: '⚙️ ตั้งค่า' },
 ]
 

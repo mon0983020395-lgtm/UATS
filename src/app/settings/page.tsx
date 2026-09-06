@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import EventsManager from '@/components/settings/EventsManager'
 
 export default function SettingsPage() {
   const [importLoading, setImportLoading] = useState(false)
@@ -108,6 +109,11 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Events Section — Full width */}
+        <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <EventsManager />
+        </div>
         
         {/* Import Section */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
