@@ -16,9 +16,10 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 interface AttendanceChartProps {
   data: ChartDataPoint[]
+  title?: string
 }
 
-export default function AttendanceChart({ data }: AttendanceChartProps) {
+export default function AttendanceChart({ data, title = '📈 ผู้เข้าร่วมย้อนหลัง 7 วัน' }: AttendanceChartProps) {
   const chartData = {
     labels: data.map((d) => d.label),
     datasets: [
@@ -58,7 +59,7 @@ export default function AttendanceChart({ data }: AttendanceChartProps) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">📈 ผู้เข้าร่วมย้อนหลัง 7 วัน</h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">{title}</h2>
       <div style={{ height: '250px' }}>
         <Bar data={chartData} options={options} />
       </div>

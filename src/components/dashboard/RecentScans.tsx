@@ -6,7 +6,11 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 
-export default function RecentScans() {
+interface Props {
+  customScans?: RecentScan[]
+}
+
+export default function RecentScans({ customScans }: Props) {
   const [scans, setScans] = useState<RecentScan[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -23,10 +27,15 @@ export default function RecentScans() {
   }
 
   useEffect(() => {
+    if (customScans) {
+      setScans(customScans)
+      setLoading(false)
+      return
+    }
     fetchScans()
     const interval = setInterval(fetchScans, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [customScans])
 
   if (loading) return <div className="flex justify-center py-8"><LoadingSpinner text="กำลังโหลดข้อมูล..." /></div>
 

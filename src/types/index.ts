@@ -23,6 +23,18 @@ export interface EventSession {
   updated_at: string
 }
 
+export interface MeditationEvent {
+  id: number
+  name: string
+  description: string | null
+  start_date: string
+  end_date: string
+  required_hours: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface AttendanceLog {
   id: number
   student_id: number
