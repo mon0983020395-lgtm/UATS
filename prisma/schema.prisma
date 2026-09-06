@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id          Int              @id @default(autoincrement())
+  student_id  String           @unique @db.VarChar(20)
+  first_name  String           @db.VarChar(100)
+  last_name   String           @db.VarChar(100)
+  department  String           @db.VarChar(150)
+  year        Int?             @db.TinyInt
+  email       String?          @db.VarChar(150)
+  qr_token    String           @unique @db.VarChar(36)
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  attendance_logs AttendanceLog[]
+
+  @@index([student_id])
+  @@index([first_name, last_name])
+  @@index([department])
+  @@map("students")
+}
+
+model AttendanceLog {
+  id          Int           @id @default(autoincrement())
+  student_id  Int
+  scan_type   ScanType
+  scanned_at  DateTime      @default(now())
+
+  student     Student       @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@index([student_id])
+  @@index([scanned_at])
+  @@index([student_id, scanned_at])
+  @@map("attendance_logs")
+}
+
+enum ScanType {
+  IN
+  OUT
+}
