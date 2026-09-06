@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/history', label: '📅 ประวัติ' },
   { href: '/report/session', label: '📋 รายงานวัน' },
   { href: '/report/group', label: '📈 รายงานกลุ่ม' },
+  { href: '/report/matrix', label: '🧮 ตารางเช็คชื่อ' },
   { href: '/settings', label: '⚙️ ตั้งค่า' },
 ]
 
