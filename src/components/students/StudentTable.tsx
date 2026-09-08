@@ -40,6 +40,7 @@ export default function StudentTable({ students, onDelete }: StudentTableProps) 
                 <th className="px-6 py-3 font-medium">รหัสนิสิต</th>
                 <th className="px-6 py-3 font-medium">ชื่อ-นามสกุล</th>
                 <th className="px-6 py-3 font-medium">สาขาวิชา</th>
+                <th className="px-6 py-3 font-medium">กลุ่ม</th>
                 <th className="px-6 py-3 font-medium">ชั้นปี</th>
                 <th className="px-6 py-3 font-medium text-right">จัดการ</th>
               </tr>
@@ -52,6 +53,7 @@ export default function StudentTable({ students, onDelete }: StudentTableProps) 
                     {student.first_name} {student.last_name}
                   </td>
                   <td className="px-6 py-4 text-gray-600">{student.department}</td>
+                  <td className="px-6 py-4 text-gray-600">{student.group || '-'}</td>
                   <td className="px-6 py-4 text-gray-600">{student.year ? `ปี ${student.year}` : '-'}</td>
                   <td className="px-6 py-4 text-right space-x-2">
                     <Link

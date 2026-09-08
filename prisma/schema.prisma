@@ -14,6 +14,7 @@ model Student {
   last_name  String   @db.VarChar(100)
   department String   @db.VarChar(150)
   year       Int?     @db.TinyInt
+  group      String?  @db.VarChar(50)
   email      String?  @db.VarChar(150)
   qr_token   String   @unique @db.VarChar(36)
   created_at DateTime @default(now())
@@ -24,6 +25,7 @@ model Student {
   @@index([student_id])
   @@index([first_name, last_name])
   @@index([department])
+  @@index([group])
   @@map("students")
 }
 

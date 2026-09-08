@@ -47,6 +47,15 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+            <button
+              onClick={async () => {
+                await fetch('/api/auth/logout', { method: 'POST' })
+                window.location.href = '/login'
+              }}
+              className="ml-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              🚪 ออกจากระบบ
+            </button>
           </div>
 
           {/* Mobile hamburger */}
@@ -77,6 +86,15 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+            <button
+              onClick={async () => {
+                await fetch('/api/auth/logout', { method: 'POST' })
+                window.location.href = '/login'
+              }}
+              className="px-4 py-2.5 text-left rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              🚪 ออกจากระบบ
+            </button>
           </div>
         )}
       </div>

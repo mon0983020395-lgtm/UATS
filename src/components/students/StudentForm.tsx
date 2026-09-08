@@ -15,6 +15,7 @@ export default function StudentForm({ initialData, onSubmit, submitLabel = 'บ�
     first_name: initialData?.first_name || '',
     last_name: initialData?.last_name || '',
     department: initialData?.department || '',
+    group: initialData?.group || '',
     year: initialData?.year?.toString() || '',
     email: initialData?.email || '',
   })
@@ -123,19 +124,32 @@ export default function StudentForm({ initialData, onSubmit, submitLabel = 'บ�
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
-        <input
-          type="email"
-          name="email"
-          maxLength={150}
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-pink-100 focus:border-pink-400 outline-none"
-          placeholder="example@student.ac.th"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">กลุ่ม (แบ่งกลุ่มปฏิบัติธรรม)</label>
+          <input
+            type="text"
+            name="group"
+            maxLength={50}
+            value={formData.group}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-pink-100 focus:border-pink-400 outline-none"
+            placeholder="เช่น กลุ่ม 1, A, B..."
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
+          <input
+            type="email"
+            name="email"
+            maxLength={150}
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-pink-100 focus:border-pink-400 outline-none"
+            placeholder="example@student.ac.th"
+          />
+        </div>
       </div>
-
       <div className="pt-4">
         <button
           type="submit"

@@ -7,6 +7,7 @@ export interface Student {
   last_name: string
   department: string
   year: number | null
+  group: string | null
   email: string | null
   qr_token: string
   created_at: string

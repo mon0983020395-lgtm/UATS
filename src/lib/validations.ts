@@ -1,4 +1,4 @@
-﻿import { z } from 'zod'
+import { z } from 'zod'
 
 export const createStudentSchema = z.object({
   student_id: z
@@ -23,6 +23,11 @@ export const createStudentSchema = z.object({
     .int()
     .min(1, 'ชั้นปีต้องอยู่ระหว่าง 1-6')
     .max(6, 'ชั้นปีต้องอยู่ระหว่าง 1-6')
+    .nullable()
+    .optional(),
+  group: z
+    .string()
+    .max(50, 'กลุ่มต้องไม่เกิน 50 ตัวอักษร')
     .nullable()
     .optional(),
   email: z
@@ -56,6 +61,7 @@ export const attendanceQuerySchema = z.object({
 
 export const studentsQuerySchema = z.object({
   search: z.string().optional(),
+  group: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })

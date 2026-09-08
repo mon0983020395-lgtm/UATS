@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const query = studentsQuerySchema.safeParse({
       search: searchParams.get('search') || undefined,
+      group: searchParams.get('group') || undefined,
       page: searchParams.get('page') || 1,
       limit: searchParams.get('limit') || 20,
     })
@@ -17,19 +18,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid query parameters' }, { status: 400 })
     }
 
-    const { search, page, limit } = query.data
+    const { search, group, page, limit } = query.data
     const skip = (page - 1) * limit
 
-    const where = search
-      ? {
-          OR: [
-            { student_id: { contains: search } },
-            { first_name: { contains: search } },
-            { last_name: { contains: search } },
-            { department: { contains: search } },
-          ],
-        }
-      : {}
+    const where: any = {}
+    
+    if (search) {
+      where.OR = [
+        { student_id: { contains: search } },
+        { first_name: { contains: search } },
+        { last_name: { contains: search } },
+        { department: { contains: search } },
+      ]
+    }
+
+    if (group) {
+      where.group = group
+    }
 
     const [students, total] = await Promise.all([
       prisma.student.findMany({
