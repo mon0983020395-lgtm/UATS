@@ -8,6 +8,7 @@ interface ImportRow {
   first_name: string
   last_name: string
   department: string
+  group?: string
   year?: string
   email?: string
 }
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const mode = (formData.get('mode') as string) || 'skip' // 'skip' | 'update'
 
     if (!file) {
-      return NextResponse.json({ success: false, error: '???????????????????' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'ไม่พบไฟล์' }, { status: 400 })
     }
 
     const text = await file.text()
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
         const data = JSON.parse(text)
         rows = Array.isArray(data) ? data : data.students || []
       } catch {
-        return NextResponse.json({ success: false, error: '???? JSON ??????????' }, { status: 400 })
+        return NextResponse.json({ success: false, error: 'ไฟล์ JSON ไม่ถูกต้อง' }, { status: 400 })
       }
     } else {
       const parsed = Papa.parse<ImportRow>(text, {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (rows.length === 0) {
-      return NextResponse.json({ success: false, error: '?????????????????' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'ไม่พบข้อมูลในไฟล์' }, { status: 400 })
     }
 
     const errors: { row: number; student_id: string; error: string }[] = []
@@ -56,14 +57,14 @@ export async function POST(request: NextRequest) {
         errors.push({
           row: rowNum,
           student_id: row.student_id || '?',
-          error: '???????????? (?????? student_id, first_name, last_name, department)',
+          error: 'ข้อมูลไม่ครบถ้วน (ต้องมี student_id, first_name, last_name, department)',
         })
         continue
       }
 
       const year = row.year ? parseInt(String(row.year)) : null
       if (row.year && (isNaN(year!) || year! < 1 || year! > 6)) {
-        errors.push({ row: rowNum, student_id: row.student_id, error: '????????????????? 1-6' })
+        errors.push({ row: rowNum, student_id: row.student_id, error: 'ชั้นปีต้องเป็นตัวเลข 1-6' })
         continue
       }
 
@@ -80,13 +81,14 @@ export async function POST(request: NextRequest) {
                 first_name: String(row.first_name).trim(),
                 last_name: String(row.last_name).trim(),
                 department: String(row.department).trim(),
+                group: row.group ? String(row.group).trim() : null,
                 year,
                 email: row.email ? String(row.email).trim() : null,
               },
             })
             successCount++
           } else {
-            errors.push({ row: rowNum, student_id: row.student_id, error: '???????????? (??????????)' })
+            errors.push({ row: rowNum, student_id: row.student_id, error: 'มีรหัสนิสิตนี้แล้ว (ข้ามการทำงาน)' })
           }
         } else {
           await prisma.student.create({
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
               first_name: String(row.first_name).trim(),
               last_name: String(row.last_name).trim(),
               department: String(row.department).trim(),
+              group: row.group ? String(row.group).trim() : null,
               year,
               email: row.email ? String(row.email).trim() : null,
               qr_token: uuidv4(),
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
           successCount++
         }
       } catch (err) {
-        errors.push({ row: rowNum, student_id: row.student_id, error: '?????????????????????????' })
+        errors.push({ row: rowNum, student_id: row.student_id, error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' })
       }
     }
 
@@ -113,6 +116,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[POST /api/import]', error)
-    return NextResponse.json({ success: false, error: '??????????????????? Import' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'เกิดข้อผิดพลาดในการ Import' }, { status: 500 })
   }
 }
