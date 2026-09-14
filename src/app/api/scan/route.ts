@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
           last_name: student.last_name,
           department: student.department,
           year: student.year,
+          group: student.group,
         },
       },
     })

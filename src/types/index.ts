@@ -88,6 +88,7 @@ export interface ScanResult {
     last_name: string
     department: string
     year: number | null
+    group?: string | null
   }
 }
 

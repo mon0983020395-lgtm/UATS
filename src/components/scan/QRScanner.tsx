@@ -5,14 +5,12 @@ import { Html5QrcodeScanner } from 'html5-qrcode'
 
 interface QRScannerProps {
   onScanSuccess: (decodedText: string) => void
-  disabled?: boolean
 }
 
-export default function QRScanner({ onScanSuccess, disabled = false }: QRScannerProps) {
+export default function QRScanner({ onScanSuccess }: QRScannerProps) {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null)
   const [isPaused, setIsPaused] = useState(false)
   const lastScannedRef = useRef<{ text: string; time: number } | null>(null)
-  const isBusyRef = useRef(false)
 
   const onScanSuccessRef = useRef(onScanSuccess)
   useEffect(() => {
@@ -24,7 +22,7 @@ export default function QRScanner({ onScanSuccess, disabled = false }: QRScanner
       scannerRef.current = new Html5QrcodeScanner(
         'qr-reader',
         { 
-          fps: 15, 
+          fps: 20, // High FPS for instant barcode/QR detection
           qrbox: { width: 260, height: 260 },
           rememberLastUsedCamera: true,
           aspectRatio: 1.0,
@@ -34,30 +32,23 @@ export default function QRScanner({ onScanSuccess, disabled = false }: QRScanner
 
       scannerRef.current.render(
         (decodedText) => {
-          if (disabled || isBusyRef.current) return
-
           const now = Date.now()
-          // Debounce same QR code within 3.5 seconds to prevent spamming
+          
+          // Debounce only the EXACT SAME QR code within 2.5 seconds
+          // Different students scan with 0ms delay!
           if (
             lastScannedRef.current &&
             lastScannedRef.current.text === decodedText &&
-            now - lastScannedRef.current.time < 3500
+            now - lastScannedRef.current.time < 2500
           ) {
             return
           }
 
           lastScannedRef.current = { text: decodedText, time: now }
-          isBusyRef.current = true
-
           onScanSuccessRef.current(decodedText)
-
-          // Allow next scan after 1.5 seconds cooldown
-          setTimeout(() => {
-            isBusyRef.current = false
-          }, 1500)
         },
         () => {
-          // Ignore normal scan frame errors
+          // Ignore normal scan frame misses
         }
       )
     }
@@ -68,7 +59,7 @@ export default function QRScanner({ onScanSuccess, disabled = false }: QRScanner
         scannerRef.current = null
       }
     }
-  }, [disabled])
+  }, [])
 
   const togglePause = () => {
     if (!scannerRef.current) return
@@ -85,14 +76,14 @@ export default function QRScanner({ onScanSuccess, disabled = false }: QRScanner
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 overflow-hidden relative">
       <div className="flex justify-between items-center mb-2 px-1">
         <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-amber-400' : 'bg-green-500 animate-pulse'}`} />
-          <span className="text-xs font-medium text-gray-600">
-            {isPaused ? 'พักการสแกน' : 'กล้องพร้อมสแกนต่อเนื่อง'}
+          <span className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
+          <span className="text-xs font-semibold text-gray-700">
+            {isPaused ? '⏸️ พักการสแกน' : '⚡ โหมดสแกนต่อเนื่องความเร็วสูง (ไม่ต้องกดปุ่ม)'}
           </span>
         </div>
         <button
           onClick={togglePause}
-          className="text-xs text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg transition-colors"
+          className="text-xs text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg transition-colors font-medium"
         >
           {isPaused ? '▶️ เปิดกล้อง' : '⏸️ พักกล้อง'}
         </button>
