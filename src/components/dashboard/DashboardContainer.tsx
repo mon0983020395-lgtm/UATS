@@ -122,7 +122,7 @@ export default function DashboardContainer() {
             <div className="lg:col-span-2">
               <AttendanceChart 
                 data={data.chartData} 
-                title={selectedSession ? '📈 สถิติ (ไม่ได้แสดงกราฟในมุมมองรอบ)' : selectedEvent ? '📈 จำนวนผู้เข้าร่วมรายวัน' : '📈 ผู้เข้าร่วมย้อนหลัง 7 วัน'} 
+                title={selectedSession ? '📊 สถิติในรอบนี้ (ตรงเวลา / สาย / สแกนออก)' : selectedEvent ? '📊 จำนวนผู้เข้าร่วมแยกตามรอบ' : '📈 ผู้เข้าร่วมย้อนหลัง 7 วัน'} 
               />
             </div>
             <div className="lg:col-span-1">

@@ -83,10 +83,46 @@ export async function GET(request: NextRequest) {
 
     // Chart Data
     let chartData: { date: string; count: number; label: string }[] = []
-    if (eventId) {
-      // Show chart data grouped by session or day for the event
-      const event = await prisma.meditationEvent.findUnique({ where: { id: eventId } })
-      if (event) {
+    
+    if (sessionId) {
+      // In session view: Show breakdown of On-Time vs Late vs Out
+      const onTimeCount = await prisma.attendanceLog.count({
+        where: { session_id: sessionId, scan_type: 'IN', is_late: false }
+      })
+      const lateCount = await prisma.attendanceLog.count({
+        where: { session_id: sessionId, scan_type: 'IN', is_late: true }
+      })
+      const outCount = await prisma.attendanceLog.count({
+        where: { session_id: sessionId, scan_type: 'OUT' }
+      })
+
+      chartData = [
+        { date: 'on_time', count: onTimeCount, label: '🟢 ตรงเวลา' },
+        { date: 'late', count: lateCount, label: '🟡 เข้าสาย' },
+        { date: 'out', count: outCount, label: '🔵 สแกนออก' },
+      ]
+    } else if (eventId) {
+      // In event view: Show attendance by Session in this event
+      const sessions = await prisma.eventSession.findMany({
+        where: { event_id: eventId },
+        orderBy: { start_time: 'asc' }
+      })
+
+      if (sessions.length > 0) {
+        chartData = await Promise.all(
+          sessions.map(async (s) => {
+            const count = await prisma.attendanceLog.count({
+              where: { session_id: s.id, scan_type: 'IN' }
+            })
+            return {
+              date: s.id.toString(),
+              count,
+              label: s.name
+            }
+          })
+        )
+      } else {
+        // Fallback to grouping by date
         const rawChart = await prisma.$queryRaw<{ date: Date; count: bigint }[]>`
           SELECT DATE(scanned_at) as date, COUNT(DISTINCT student_id) as count
           FROM attendance_logs
