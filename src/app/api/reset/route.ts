@@ -6,9 +6,9 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const confirmation = body.confirmation
 
-    if (confirmation !== '????????') {
+    if (confirmation !== 'ยืนยันลบ') {
       return NextResponse.json(
-        { success: false, error: '?????????? "????????" ?????????????????????????????' },
+        { success: false, error: 'กรุณาพิมพ์ "ยืนยันลบ" เพื่อยืนยันการล้างข้อมูลทั้งหมด' },
         { status: 400 }
       )
     }
@@ -19,7 +19,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: '?????????????????????',
+      message: 'ล้างข้อมูลทั้งหมดสำเร็จ',
       data: {
         deletedStudents: deletedStudents.count,
         deletedLogs: deletedLogs.count,
@@ -27,6 +27,6 @@ export async function DELETE(request: NextRequest) {
     })
   } catch (error) {
     console.error('[DELETE /api/reset]', error)
-    return NextResponse.json({ success: false, error: '?????????????????????????????' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'เกิดข้อผิดพลาดในการล้างข้อมูล' }, { status: 500 })
   }
 }

@@ -33,6 +33,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/export/all]', error)
-    return NextResponse.json({ success: false, error: '??????????????????? Export' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'เกิดข้อผิดพลาดในการ Export' }, { status: 500 })
   }
 }

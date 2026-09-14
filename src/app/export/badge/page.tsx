@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import QRCode from 'qrcode'
 import Link from 'next/link'
 
@@ -17,14 +17,17 @@ type TextStyle = {
 
 function BadgeExportContent() {
   const searchParams = useSearchParams()
-  const group = searchParams.get('group')
+  const router = useRouter()
+  const initialGroup = searchParams.get('group') || ''
   
+  const [group, setGroup] = useState(initialGroup)
+  const [groups, setGroups] = useState<string[]>([])
   const [students, setStudents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // Badge Design State
   const [bgImage, setBgImage] = useState<string | null>(null)
-  const [cardSize, setCardSize] = useState({ width: 210, height: 297 })
+  const [cardSize, setCardSize] = useState({ width: 250, height: 350 })
   
   // Element Positions & Styles
   const [qrStyle, setQrStyle] = useState({ top: 50, left: 50, size: 40 })
@@ -35,14 +38,24 @@ function BadgeExportContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    fetch('/api/groups')
+      .then(r => r.json())
+      .then(j => {
+        if (j.success) setGroups(j.data)
+      })
+      .catch(console.error)
+  }, [])
+
+  useEffect(() => {
     const fetchAll = async () => {
+      setLoading(true)
       try {
-        let url = `/api/students?limit=1000`
+        let url = `/api/students?limit=5000&sort=student_id`
         if (group) url += `&group=${encodeURIComponent(group)}`
         
         const res = await fetch(url)
         const json = await res.json()
-        if (json.success) {
+        if (json.success && json.data?.items) {
           const withQRs = await Promise.all(json.data.items.map(async (st: any) => {
             const qrUrl = await QRCode.toDataURL(st.qr_token, {
               width: 300,
@@ -52,15 +65,25 @@ function BadgeExportContent() {
             return { ...st, qrUrl }
           }))
           setStudents(withQRs)
+        } else {
+          setStudents([])
         }
       } catch (err) {
         console.error(err)
+        setStudents([])
       } finally {
         setLoading(false)
       }
     }
     fetchAll()
   }, [group])
+
+  const handleGroupChange = (newGroup: string) => {
+    setGroup(newGroup)
+    const params = new URLSearchParams()
+    if (newGroup) params.set('group', newGroup)
+    router.replace(`/export/badge${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false })
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -71,7 +94,7 @@ function BadgeExportContent() {
       const img = new Image()
       img.onload = () => {
         const ratio = img.height / img.width
-        setCardSize({ width: 250, height: 250 * ratio })
+        setCardSize({ width: 250, height: Math.round(250 * ratio) })
       }
       img.src = url
     }
@@ -118,9 +141,9 @@ function BadgeExportContent() {
             <input type="color" value={style.color} onChange={e => setStyle({...style, color: e.target.value})} className="w-8 h-6 rounded cursor-pointer" />
             
             <div className="flex border rounded overflow-hidden ml-auto">
-              <button onClick={() => setStyle({...style, textAlign: 'left'})} className={`px-2 py-1 ${style.textAlign === 'left' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`}>👈</button>
-              <button onClick={() => setStyle({...style, textAlign: 'center'})} className={`px-2 py-1 border-l border-r ${style.textAlign === 'center' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`}>↔️</button>
-              <button onClick={() => setStyle({...style, textAlign: 'right'})} className={`px-2 py-1 ${style.textAlign === 'right' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`}>👉</button>
+              <button onClick={() => setStyle({...style, textAlign: 'left'})} className={`px-2 py-1 ${style.textAlign === 'left' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`} title="ชิดซ้าย">👈</button>
+              <button onClick={() => setStyle({...style, textAlign: 'center'})} className={`px-2 py-1 border-l border-r ${style.textAlign === 'center' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`} title="กึ่งกลาง">↔️</button>
+              <button onClick={() => setStyle({...style, textAlign: 'right'})} className={`px-2 py-1 ${style.textAlign === 'right' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`} title="ชิดขวา">👉</button>
             </div>
           </div>
 
@@ -140,9 +163,6 @@ function BadgeExportContent() {
     </div>
   )
 
-  if (loading) return <div className="p-8 text-center">กำลังโหลดข้อมูล...</div>
-  if (students.length === 0) return <div className="p-8 text-center">ไม่พบข้อมูลนิสิตในกลุ่มนี้</div>
-
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
       <div className="print:hidden bg-white shadow-md border-b sticky top-0 z-50">
@@ -152,20 +172,32 @@ function BadgeExportContent() {
               <h1 className="text-2xl font-bold text-gray-900">🎨 สตูดิโอออกแบบบัตรประจำตัว</h1>
               <p className="text-gray-500 text-sm">อัปโหลดพื้นหลังบัตร ปรับแต่งฟอนต์ สี และการจัดวางได้อย่างอิสระ</p>
             </div>
-            <div className="flex gap-2">
-              <Link href="/students" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300">
-                กลับ
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={group}
+                onChange={(e) => handleGroupChange(e.target.value)}
+                className="border border-gray-300 bg-white rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-pink-500"
+              >
+                <option value="">ทุกกลุ่ม (ทั้งหมด)</option>
+                {groups.map(g => (
+                  <option key={g} value={g}>กลุ่ม: {g}</option>
+                ))}
+              </select>
+
+              <Link href="/students" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 text-sm">
+                ← กลับ
               </Link>
               <button 
                 onClick={printDocument}
-                className="bg-pink-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-pink-700 shadow-sm flex items-center gap-2"
+                disabled={students.length === 0}
+                className="bg-pink-600 disabled:opacity-50 text-white px-5 py-2 rounded-lg font-medium hover:bg-pink-700 shadow-sm flex items-center gap-2 text-sm"
               >
                 🖨️ พิมพ์บัตรทั้งหมด ({students.length} ใบ)
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200 max-h-[40vh] overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200 max-h-[42vh] overflow-y-auto">
             
             {/* Background & QR Code Setup */}
             <div className="space-y-4 lg:col-span-1">
@@ -176,7 +208,7 @@ function BadgeExportContent() {
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full bg-pink-50 text-pink-600 border border-pink-200 py-2 rounded-lg hover:bg-pink-100 transition-colors text-sm font-medium"
                 >
-                  {bgImage ? 'เปลี่ยนรูปพื้นหลัง' : '+ อัปโหลดรูปจาก Canva'}
+                  {bgImage ? '🔄 เปลี่ยนรูปพื้นหลัง' : '+ อัปโหลดรูปจาก Canva'}
                 </button>
                 
                 <div className="space-y-1 text-xs pt-2">
@@ -185,11 +217,11 @@ function BadgeExportContent() {
                     <input type="range" min="10" max="90" value={qrStyle.size} onChange={e => setQrStyle({...qrStyle, size: Number(e.target.value)})} className="w-1/2" />
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>แกน Y</span>
+                    <span>แกน Y (บน-ล่าง)</span>
                     <input type="range" min="0" max="100" value={qrStyle.top} onChange={e => setQrStyle({...qrStyle, top: Number(e.target.value)})} className="w-1/2" />
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>แกน X</span>
+                    <span>แกน X (ซ้าย-ขวา)</span>
                     <input type="range" min="0" max="100" value={qrStyle.left} onChange={e => setQrStyle({...qrStyle, left: Number(e.target.value)})} className="w-1/2" />
                   </div>
                 </div>
@@ -209,99 +241,113 @@ function BadgeExportContent() {
 
       {/* Canvas Area (Printable) */}
       <div className="p-4 md:p-8 max-w-7xl mx-auto print:p-0 print:max-w-none print:m-0">
-        {!bgImage && (
-          <div className="print:hidden text-center text-gray-500 py-20 border-2 border-dashed border-gray-300 rounded-2xl bg-white">
-            <h2 className="text-xl font-bold mb-2">อัปโหลดภาพพื้นหลังบัตรเพื่อเริ่มต้น</h2>
-            <p>ออกแบบพื้นหลังใน Canva เว้นที่ว่างสำหรับข้อความ แล้วนำไฟล์มาอัปโหลดที่นี่</p>
+        {loading ? (
+          <div className="p-20 text-center text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto mb-3"></div>
+            กำลังโหลดข้อมูลนิสิต...
           </div>
-        )}
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-[2mm]">
-          {students.map((st) => (
-            <div 
-              key={st.id} 
-              className="relative overflow-hidden bg-white shadow-sm print:shadow-none print:break-inside-avoid print:border print:border-gray-100"
-              style={{
-                width: bgImage ? cardSize.width : 250,
-                height: bgImage ? cardSize.height : 350,
-                backgroundImage: bgImage ? `url(${bgImage})` : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                margin: '0 auto',
-              }}
-            >
-              {!bgImage && <div className="absolute inset-0 border-2 border-gray-200 rounded-lg"></div>}
-
-              {/* QR Code */}
-              <div 
-                className="absolute transform -translate-y-1/2 bg-white rounded-md print:bg-transparent"
-                style={{
-                  top: `${qrStyle.top}%`,
-                  left: `${qrStyle.left}%`,
-                  width: `${qrStyle.size}%`,
-                  height: `${qrStyle.size}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              >
-                <img src={st.qrUrl} alt="QR" className="w-full h-full object-contain mix-blend-multiply" />
+        ) : students.length === 0 ? (
+          <div className="text-center text-gray-500 py-20 border-2 border-dashed border-gray-300 rounded-2xl bg-white">
+            <div className="text-4xl mb-2">📭</div>
+            <h2 className="text-xl font-bold mb-1">ไม่พบข้อมูลนิสิต</h2>
+            <p className="text-sm">{group ? `ไม่มีนิสิตในกลุ่ม "${group}" กรุณาเลือกกลุ่มอื่น` : 'ยังไม่มีนิสิตในระบบ'}</p>
+          </div>
+        ) : (
+          <>
+            {!bgImage && (
+              <div className="print:hidden text-center text-gray-500 py-6 mb-6 border-2 border-dashed border-gray-300 rounded-xl bg-white">
+                <p className="font-medium text-gray-700">💡 คำแนะนำ: กดปุ่ม "+ อัปโหลดรูปจาก Canva" ด้านบนเพื่อใส่ภาพพื้นหลังบัตร</p>
               </div>
-
-              {/* Name */}
-              {nameStyle.visible && (
+            )}
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-[2mm]">
+              {students.map((st) => (
                 <div 
-                  className="absolute whitespace-nowrap"
+                  key={st.id} 
+                  className="relative overflow-hidden bg-white shadow-sm print:shadow-none print:break-inside-avoid print:border print:border-gray-100"
                   style={{
-                    top: `${nameStyle.top}%`,
-                    left: `${nameStyle.left}%`,
-                    fontSize: `${nameStyle.fontSize}px`,
-                    color: nameStyle.color,
-                    fontWeight: nameStyle.fontWeight,
-                    transform: getTransform(nameStyle.textAlign),
-                    textAlign: nameStyle.textAlign
+                    width: bgImage ? cardSize.width : 250,
+                    height: bgImage ? cardSize.height : 350,
+                    backgroundImage: bgImage ? `url(${bgImage})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    margin: '0 auto',
                   }}
                 >
-                  {st.first_name} {st.last_name}
-                </div>
-              )}
+                  {!bgImage && <div className="absolute inset-0 border-2 border-gray-200 rounded-lg"></div>}
 
-              {/* Student ID */}
-              {idStyle.visible && (
-                <div 
-                  className="absolute whitespace-nowrap"
-                  style={{
-                    top: `${idStyle.top}%`,
-                    left: `${idStyle.left}%`,
-                    fontSize: `${idStyle.fontSize}px`,
-                    color: idStyle.color,
-                    fontWeight: idStyle.fontWeight,
-                    transform: getTransform(idStyle.textAlign),
-                    textAlign: idStyle.textAlign
-                  }}
-                >
-                  {st.student_id}
-                </div>
-              )}
+                  {/* QR Code */}
+                  <div 
+                    className="absolute bg-white rounded-md print:bg-transparent"
+                    style={{
+                      top: `${qrStyle.top}%`,
+                      left: `${qrStyle.left}%`,
+                      width: `${qrStyle.size}%`,
+                      height: `${qrStyle.size}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    <img src={st.qrUrl} alt="QR" className="w-full h-full object-contain mix-blend-multiply" />
+                  </div>
 
-              {/* Group */}
-              {groupStyle.visible && st.group && (
-                <div 
-                  className="absolute whitespace-nowrap"
-                  style={{
-                    top: `${groupStyle.top}%`,
-                    left: `${groupStyle.left}%`,
-                    fontSize: `${groupStyle.fontSize}px`,
-                    color: groupStyle.color,
-                    fontWeight: groupStyle.fontWeight,
-                    transform: getTransform(groupStyle.textAlign),
-                    textAlign: groupStyle.textAlign
-                  }}
-                >
-                  กลุ่ม: {st.group}
+                  {/* Name */}
+                  {nameStyle.visible && (
+                    <div 
+                      className="absolute whitespace-nowrap"
+                      style={{
+                        top: `${nameStyle.top}%`,
+                        left: `${nameStyle.left}%`,
+                        fontSize: `${nameStyle.fontSize}px`,
+                        color: nameStyle.color,
+                        fontWeight: nameStyle.fontWeight,
+                        transform: getTransform(nameStyle.textAlign),
+                        textAlign: nameStyle.textAlign
+                      }}
+                    >
+                      {st.first_name} {st.last_name}
+                    </div>
+                  )}
+
+                  {/* Student ID */}
+                  {idStyle.visible && (
+                    <div 
+                      className="absolute whitespace-nowrap"
+                      style={{
+                        top: `${idStyle.top}%`,
+                        left: `${idStyle.left}%`,
+                        fontSize: `${idStyle.fontSize}px`,
+                        color: idStyle.color,
+                        fontWeight: idStyle.fontWeight,
+                        transform: getTransform(idStyle.textAlign),
+                        textAlign: idStyle.textAlign
+                      }}
+                    >
+                      {st.student_id}
+                    </div>
+                  )}
+
+                  {/* Group */}
+                  {groupStyle.visible && st.group && (
+                    <div 
+                      className="absolute whitespace-nowrap"
+                      style={{
+                        top: `${groupStyle.top}%`,
+                        left: `${groupStyle.left}%`,
+                        fontSize: `${groupStyle.fontSize}px`,
+                        color: groupStyle.color,
+                        fontWeight: groupStyle.fontWeight,
+                        transform: getTransform(groupStyle.textAlign),
+                        textAlign: groupStyle.textAlign
+                      }}
+                    >
+                      กลุ่ม: {st.group}
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

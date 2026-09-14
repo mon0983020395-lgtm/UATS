@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       first_name: log.student.first_name,
       last_name: log.student.last_name,
       department: log.student.department,
-      scan_type: log.scan_type === 'IN' ? '????' : '???',
+      scan_type: log.scan_type === 'IN' ? 'เข้า' : 'ออก',
       scanned_at: format(log.scanned_at, 'dd/MM/yyyy HH:mm:ss', { locale: th }),
     }))
 
@@ -48,6 +48,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/export/attendance]', error)
-    return NextResponse.json({ success: false, error: '??????????????????? Export' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'เกิดข้อผิดพลาดในการ Export' }, { status: 500 })
   }
 }

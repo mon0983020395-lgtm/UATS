@@ -8,6 +8,8 @@ import { th } from 'date-fns/locale'
 export default function MatrixReportPage() {
   const [events, setEvents] = useState<any[]>([])
   const [selectedEvent, setSelectedEvent] = useState('')
+  const [groups, setGroups] = useState<string[]>([])
+  const [selectedGroup, setSelectedGroup] = useState('')
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
@@ -18,18 +20,23 @@ export default function MatrixReportPage() {
         setSelectedEvent(j.data[0].id.toString())
       }
     })
+    fetch('/api/groups').then(r => r.json()).then(j => {
+      if (j.success) setGroups(j.data)
+    })
   }, [])
 
   useEffect(() => {
     if (!selectedEvent) return
     setLoading(true)
-    fetch(`/api/report/matrix?event_id=${selectedEvent}`)
+    let url = `/api/report/matrix?event_id=${selectedEvent}`
+    if (selectedGroup) url += `&group=${encodeURIComponent(selectedGroup)}`
+    fetch(url)
       .then(r => r.json())
       .then(j => {
         if (j.success) setData(j.data)
       })
       .finally(() => setLoading(false))
-  }, [selectedEvent])
+  }, [selectedEvent, selectedGroup])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -46,15 +53,26 @@ export default function MatrixReportPage() {
           <h1 className="text-2xl font-bold text-gray-900">ตารางเช็คชื่อ (Matrix Report)</h1>
           <p className="text-gray-500">รายงานสรุปการเข้าร่วมรายรอบตลอดโครงการ</p>
         </div>
-        <div>
+        <div className="flex flex-wrap gap-2">
           <select
             value={selectedEvent}
             onChange={e => setSelectedEvent(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2 text-sm outline-none bg-white min-w-[250px]"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none bg-white min-w-[200px]"
           >
             <option value="" disabled>เลือกกิจกรรม...</option>
             {events.map(ev => (
               <option key={ev.id} value={ev.id}>{ev.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedGroup}
+            onChange={e => setSelectedGroup(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none bg-white min-w-[150px]"
+          >
+            <option value="">ทุกกลุ่ม (ทั้งหมด)</option>
+            {groups.map(g => (
+              <option key={g} value={g}>กลุ่ม: {g}</option>
             ))}
           </select>
         </div>

@@ -20,18 +20,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: { sessions: [], students: [] } })
     }
 
-    // 2. Get all students (In a real app, only registered students. Here we fetch all or just those who have some log)
-    // For now, fetch students who have at least one log in this event
-    const studentsWithLogs = await prisma.attendanceLog.findMany({
-      where: { event_id: eventId },
-      select: { student_id: true },
-      distinct: ['student_id']
-    })
-    
-    const studentIds = studentsWithLogs.map(s => s.student_id)
+    // 2. Get all students (or filtered by group)
+    const group = searchParams.get('group')
+    const studentWhere: any = {}
+    if (group) studentWhere.group = group
 
     const students = await prisma.student.findMany({
-      where: { id: { in: studentIds } },
+      where: studentWhere,
       orderBy: { student_id: 'asc' }
     })
 

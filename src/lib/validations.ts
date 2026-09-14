@@ -56,14 +56,14 @@ export const attendanceQuerySchema = z.object({
   department: z.string().optional(),
   scan_type: z.enum(['IN', 'OUT']).optional(),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(10000).default(20),
 })
 
 export const studentsQuerySchema = z.object({
   search: z.string().optional(),
   group: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(10000).default(20),
 })
 
 export type CreateStudentInput = z.infer<typeof createStudentSchema>

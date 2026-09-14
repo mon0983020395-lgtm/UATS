@@ -7,11 +7,14 @@ import { v4 as uuidv4 } from 'uuid'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const limitParam = searchParams.get('limit')
+    const sortParam = searchParams.get('sort')
+
     const query = studentsQuerySchema.safeParse({
       search: searchParams.get('search') || undefined,
       group: searchParams.get('group') || undefined,
       page: searchParams.get('page') || 1,
-      limit: searchParams.get('limit') || 20,
+      limit: limitParam === 'all' ? 10000 : (limitParam || 20),
     })
 
     if (!query.success) {
@@ -36,12 +39,16 @@ export async function GET(request: NextRequest) {
       where.group = group
     }
 
+    const orderBy = sortParam === 'student_id'
+      ? { student_id: 'asc' as const }
+      : { created_at: 'desc' as const }
+
     const [students, total] = await Promise.all([
       prisma.student.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy,
         include: {
           attendance_logs: {
             orderBy: { scanned_at: 'desc' },
