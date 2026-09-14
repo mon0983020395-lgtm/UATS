@@ -12,6 +12,7 @@ const menuItems = [
     children: [
       { href: '/students', label: '👥 ฐานข้อมูลนิสิต' },
       { href: '/history', label: '📅 ประวัติการสแกน' },
+      { href: '/export/badge', label: '🎨 ออกแบบบัตร (Canva)' },
     ]
   },
   {
