@@ -5,6 +5,16 @@ import { useSearchParams } from 'next/navigation'
 import QRCode from 'qrcode'
 import Link from 'next/link'
 
+type TextStyle = {
+  top: number
+  left: number
+  fontSize: number
+  color: string
+  visible: boolean
+  fontWeight: 'normal' | 'bold'
+  textAlign: 'left' | 'center' | 'right'
+}
+
 function BadgeExportContent() {
   const searchParams = useSearchParams()
   const group = searchParams.get('group')
@@ -14,13 +24,13 @@ function BadgeExportContent() {
 
   // Badge Design State
   const [bgImage, setBgImage] = useState<string | null>(null)
-  const [cardSize, setCardSize] = useState({ width: 210, height: 297 }) // Default A4 ratio for standard vertical badge
+  const [cardSize, setCardSize] = useState({ width: 210, height: 297 })
   
-  // Element Positions (in percentage to scale properly)
+  // Element Positions & Styles
   const [qrStyle, setQrStyle] = useState({ top: 50, left: 50, size: 40 })
-  const [nameStyle, setNameStyle] = useState({ top: 15, left: 50, fontSize: 16, color: '#000000', visible: true })
-  const [idStyle, setIdStyle] = useState({ top: 22, left: 50, fontSize: 12, color: '#666666', visible: true })
-  const [groupStyle, setGroupStyle] = useState({ top: 30, left: 50, fontSize: 14, color: '#e53e3e', visible: true })
+  const [nameStyle, setNameStyle] = useState<TextStyle>({ top: 15, left: 50, fontSize: 16, color: '#000000', visible: true, fontWeight: 'bold', textAlign: 'center' })
+  const [idStyle, setIdStyle] = useState<TextStyle>({ top: 22, left: 50, fontSize: 12, color: '#666666', visible: true, fontWeight: 'normal', textAlign: 'center' })
+  const [groupStyle, setGroupStyle] = useState<TextStyle>({ top: 30, left: 50, fontSize: 14, color: '#e53e3e', visible: true, fontWeight: 'bold', textAlign: 'center' })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -37,7 +47,7 @@ function BadgeExportContent() {
             const qrUrl = await QRCode.toDataURL(st.qr_token, {
               width: 300,
               margin: 0,
-              color: { dark: '#000000', light: '#FFFFFF00' } // transparent background
+              color: { dark: '#000000', light: '#FFFFFF00' }
             })
             return { ...st, qrUrl }
           }))
@@ -58,10 +68,8 @@ function BadgeExportContent() {
       const url = URL.createObjectURL(file)
       setBgImage(url)
       
-      // Auto-adjust ratio based on image (optional, basic implementation)
       const img = new Image()
       img.onload = () => {
-        // Keep a manageable width for screen preview, e.g., 300px base
         const ratio = img.height / img.width
         setCardSize({ width: 250, height: 250 * ratio })
       }
@@ -73,18 +81,76 @@ function BadgeExportContent() {
     window.print()
   }
 
+  const getTransform = (align: 'left' | 'center' | 'right') => {
+    if (align === 'left') return 'translate(0%, -50%)'
+    if (align === 'right') return 'translate(-100%, -50%)'
+    return 'translate(-50%, -50%)'
+  }
+
+  const TextControl = ({ label, style, setStyle }: { label: string, style: TextStyle, setStyle: (s: TextStyle) => void }) => (
+    <div className="space-y-3 bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+      <label className="font-bold text-sm text-gray-700 flex justify-between items-center border-b pb-2">
+        <span>{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-normal text-gray-500">แสดงผล</span>
+          <input type="checkbox" checked={style.visible} onChange={e => setStyle({...style, visible: e.target.checked})} className="w-4 h-4 text-pink-600 rounded" />
+        </div>
+      </label>
+      
+      {style.visible && (
+        <div className="space-y-3 text-xs">
+          {/* Size & Weight */}
+          <div className="flex justify-between items-center gap-2">
+            <span>ขนาด ({style.fontSize}px)</span>
+            <input type="range" min="8" max="40" value={style.fontSize} onChange={e => setStyle({...style, fontSize: Number(e.target.value)})} className="flex-1" />
+            <button 
+              onClick={() => setStyle({...style, fontWeight: style.fontWeight === 'bold' ? 'normal' : 'bold'})}
+              className={`px-2 py-1 rounded border ${style.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-700 border-gray-300'}`}
+              title="ตัวหนา/ตัวบาง"
+            >
+              <b>B</b>
+            </button>
+          </div>
+          
+          {/* Color & Alignment */}
+          <div className="flex justify-between items-center gap-2">
+            <span>สีอักษร</span>
+            <input type="color" value={style.color} onChange={e => setStyle({...style, color: e.target.value})} className="w-8 h-6 rounded cursor-pointer" />
+            
+            <div className="flex border rounded overflow-hidden ml-auto">
+              <button onClick={() => setStyle({...style, textAlign: 'left'})} className={`px-2 py-1 ${style.textAlign === 'left' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`}>👈</button>
+              <button onClick={() => setStyle({...style, textAlign: 'center'})} className={`px-2 py-1 border-l border-r ${style.textAlign === 'center' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`}>↔️</button>
+              <button onClick={() => setStyle({...style, textAlign: 'right'})} className={`px-2 py-1 ${style.textAlign === 'right' ? 'bg-gray-200' : 'bg-white hover:bg-gray-50'}`}>👉</button>
+            </div>
+          </div>
+
+          {/* X & Y Axis */}
+          <div className="space-y-1 pt-1 border-t border-gray-100">
+            <div className="flex justify-between items-center">
+              <span>แกน Y (บน-ล่าง)</span>
+              <input type="range" min="0" max="100" value={style.top} onChange={e => setStyle({...style, top: Number(e.target.value)})} className="w-2/3" />
+            </div>
+            <div className="flex justify-between items-center">
+              <span>แกน X (ซ้าย-ขวา)</span>
+              <input type="range" min="0" max="100" value={style.left} onChange={e => setStyle({...style, left: Number(e.target.value)})} className="w-2/3" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   if (loading) return <div className="p-8 text-center">กำลังโหลดข้อมูล...</div>
   if (students.length === 0) return <div className="p-8 text-center">ไม่พบข้อมูลนิสิตในกลุ่มนี้</div>
 
   return (
     <div className="bg-gray-100 min-h-screen pb-20">
-      {/* Control Panel (Hidden when printing) */}
       <div className="print:hidden bg-white shadow-md border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto p-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">🎨 สตูดิโอออกแบบบัตรประจำตัว</h1>
-              <p className="text-gray-500 text-sm">อัปโหลดพื้นหลังบัตรจาก Canva และจัดวางตำแหน่งข้อมูลให้ตรงกัน</p>
+              <p className="text-gray-500 text-sm">อัปโหลดพื้นหลังบัตร ปรับแต่งฟอนต์ สี และการจัดวางได้อย่างอิสระ</p>
             </div>
             <div className="flex gap-2">
               <Link href="/students" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-300">
@@ -99,100 +165,42 @@ function BadgeExportContent() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-            {/* Background Upload */}
-            <div className="space-y-2 lg:col-span-1">
-              <label className="font-bold text-sm text-gray-700">1. พื้นหลังบัตร (Canva)</label>
-              <input 
-                type="file" 
-                accept="image/png, image/jpeg" 
-                className="hidden" 
-                ref={fileInputRef} 
-                onChange={handleImageUpload} 
-              />
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-600 py-3 rounded-lg hover:bg-gray-50 hover:border-pink-400 transition-colors text-sm"
-              >
-                {bgImage ? 'เปลี่ยนรูปพื้นหลัง' : 'อัปโหลดรูปพื้นหลัง'}
-              </button>
-            </div>
-
-            {/* QR Code Adjustments */}
-            <div className="space-y-2 lg:col-span-1">
-              <label className="font-bold text-sm text-gray-700">2. ตำแหน่ง QR Code</label>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between items-center">
-                  <span>ขนาด: {qrStyle.size}%</span>
-                  <input type="range" min="10" max="90" value={qrStyle.size} onChange={e => setQrStyle({...qrStyle, size: Number(e.target.value)})} className="w-1/2" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>แกน Y (บน-ล่าง):</span>
-                  <input type="range" min="0" max="100" value={qrStyle.top} onChange={e => setQrStyle({...qrStyle, top: Number(e.target.value)})} className="w-1/2" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>แกน X (ซ้าย-ขวา):</span>
-                  <input type="range" min="0" max="100" value={qrStyle.left} onChange={e => setQrStyle({...qrStyle, left: Number(e.target.value)})} className="w-1/2" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200 max-h-[40vh] overflow-y-auto">
+            
+            {/* Background & QR Code Setup */}
+            <div className="space-y-4 lg:col-span-1">
+              <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm space-y-2">
+                <label className="font-bold text-sm text-gray-700 border-b pb-2 block">1. พื้นหลัง & QR Code</label>
+                <input type="file" accept="image/png, image/jpeg" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full bg-pink-50 text-pink-600 border border-pink-200 py-2 rounded-lg hover:bg-pink-100 transition-colors text-sm font-medium"
+                >
+                  {bgImage ? 'เปลี่ยนรูปพื้นหลัง' : '+ อัปโหลดรูปจาก Canva'}
+                </button>
+                
+                <div className="space-y-1 text-xs pt-2">
+                  <div className="flex justify-between items-center">
+                    <span>ขนาด QR ({qrStyle.size}%)</span>
+                    <input type="range" min="10" max="90" value={qrStyle.size} onChange={e => setQrStyle({...qrStyle, size: Number(e.target.value)})} className="w-1/2" />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>แกน Y</span>
+                    <input type="range" min="0" max="100" value={qrStyle.top} onChange={e => setQrStyle({...qrStyle, top: Number(e.target.value)})} className="w-1/2" />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>แกน X</span>
+                    <input type="range" min="0" max="100" value={qrStyle.left} onChange={e => setQrStyle({...qrStyle, left: Number(e.target.value)})} className="w-1/2" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Name Adjustments */}
-            <div className="space-y-2 lg:col-span-1">
-              <label className="font-bold text-sm text-gray-700 flex justify-between">
-                <span>3. ชื่อ-สกุล</span>
-                <input type="checkbox" checked={nameStyle.visible} onChange={e => setNameStyle({...nameStyle, visible: e.target.checked})} />
-              </label>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between items-center">
-                  <span>ขนาดอักษร: {nameStyle.fontSize}px</span>
-                  <input type="range" min="8" max="40" value={nameStyle.fontSize} onChange={e => setNameStyle({...nameStyle, fontSize: Number(e.target.value)})} className="w-1/2" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>แกน Y:</span>
-                  <input type="range" min="0" max="100" value={nameStyle.top} onChange={e => setNameStyle({...nameStyle, top: Number(e.target.value)})} className="w-1/2" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>สี:</span>
-                  <input type="color" value={nameStyle.color} onChange={e => setNameStyle({...nameStyle, color: e.target.value})} className="w-1/2 h-5" />
-                </div>
-              </div>
-            </div>
-
-            {/* ID Adjustments */}
-            <div className="space-y-2 lg:col-span-1">
-              <label className="font-bold text-sm text-gray-700 flex justify-between">
-                <span>4. รหัสนิสิต</span>
-                <input type="checkbox" checked={idStyle.visible} onChange={e => setIdStyle({...idStyle, visible: e.target.checked})} />
-              </label>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between items-center">
-                  <span>แกน Y:</span>
-                  <input type="range" min="0" max="100" value={idStyle.top} onChange={e => setIdStyle({...idStyle, top: Number(e.target.value)})} className="w-1/2" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>สี:</span>
-                  <input type="color" value={idStyle.color} onChange={e => setIdStyle({...idStyle, color: e.target.value})} className="w-1/2 h-5" />
-                </div>
-              </div>
-            </div>
-
-            {/* Group Adjustments */}
-            <div className="space-y-2 lg:col-span-1">
-              <label className="font-bold text-sm text-gray-700 flex justify-between">
-                <span>5. กลุ่ม</span>
-                <input type="checkbox" checked={groupStyle.visible} onChange={e => setGroupStyle({...groupStyle, visible: e.target.checked})} />
-              </label>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between items-center">
-                  <span>แกน Y:</span>
-                  <input type="range" min="0" max="100" value={groupStyle.top} onChange={e => setGroupStyle({...groupStyle, top: Number(e.target.value)})} className="w-1/2" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>สี:</span>
-                  <input type="color" value={groupStyle.color} onChange={e => setGroupStyle({...groupStyle, color: e.target.value})} className="w-1/2 h-5" />
-                </div>
-              </div>
+            {/* Text Controls */}
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <TextControl label="2. ชื่อ-สกุล" style={nameStyle} setStyle={setNameStyle} />
+              <TextControl label="3. รหัสนิสิต" style={idStyle} setStyle={setIdStyle} />
+              <TextControl label="4. กลุ่ม (ถ้ามี)" style={groupStyle} setStyle={setGroupStyle} />
             </div>
 
           </div>
@@ -204,12 +212,12 @@ function BadgeExportContent() {
         {!bgImage && (
           <div className="print:hidden text-center text-gray-500 py-20 border-2 border-dashed border-gray-300 rounded-2xl bg-white">
             <h2 className="text-xl font-bold mb-2">อัปโหลดภาพพื้นหลังบัตรเพื่อเริ่มต้น</h2>
-            <p>ออกแบบพื้นหลังใน Canva เว้นที่ว่างสำหรับ QR Code และข้อความ แล้วนำไฟล์มาอัปโหลดที่นี่</p>
+            <p>ออกแบบพื้นหลังใน Canva เว้นที่ว่างสำหรับข้อความ แล้วนำไฟล์มาอัปโหลดที่นี่</p>
           </div>
         )}
         
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-[2mm]">
-          {students.map((st, index) => (
+          {students.map((st) => (
             <div 
               key={st.id} 
               className="relative overflow-hidden bg-white shadow-sm print:shadow-none print:break-inside-avoid print:border print:border-gray-100"
@@ -222,17 +230,17 @@ function BadgeExportContent() {
                 margin: '0 auto',
               }}
             >
-              {/* Fallback border if no image */}
               {!bgImage && <div className="absolute inset-0 border-2 border-gray-200 rounded-lg"></div>}
 
               {/* QR Code */}
               <div 
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-md print:bg-transparent"
+                className="absolute transform -translate-y-1/2 bg-white rounded-md print:bg-transparent"
                 style={{
                   top: `${qrStyle.top}%`,
                   left: `${qrStyle.left}%`,
                   width: `${qrStyle.size}%`,
                   height: `${qrStyle.size}%`,
+                  transform: 'translate(-50%, -50%)'
                 }}
               >
                 <img src={st.qrUrl} alt="QR" className="w-full h-full object-contain mix-blend-multiply" />
@@ -241,12 +249,15 @@ function BadgeExportContent() {
               {/* Name */}
               {nameStyle.visible && (
                 <div 
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 font-bold whitespace-nowrap"
+                  className="absolute whitespace-nowrap"
                   style={{
                     top: `${nameStyle.top}%`,
                     left: `${nameStyle.left}%`,
                     fontSize: `${nameStyle.fontSize}px`,
                     color: nameStyle.color,
+                    fontWeight: nameStyle.fontWeight,
+                    transform: getTransform(nameStyle.textAlign),
+                    textAlign: nameStyle.textAlign
                   }}
                 >
                   {st.first_name} {st.last_name}
@@ -256,12 +267,15 @@ function BadgeExportContent() {
               {/* Student ID */}
               {idStyle.visible && (
                 <div 
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 font-medium whitespace-nowrap"
+                  className="absolute whitespace-nowrap"
                   style={{
                     top: `${idStyle.top}%`,
                     left: `${idStyle.left}%`,
                     fontSize: `${idStyle.fontSize}px`,
                     color: idStyle.color,
+                    fontWeight: idStyle.fontWeight,
+                    transform: getTransform(idStyle.textAlign),
+                    textAlign: idStyle.textAlign
                   }}
                 >
                   {st.student_id}
@@ -271,12 +285,15 @@ function BadgeExportContent() {
               {/* Group */}
               {groupStyle.visible && st.group && (
                 <div 
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 font-bold whitespace-nowrap"
+                  className="absolute whitespace-nowrap"
                   style={{
                     top: `${groupStyle.top}%`,
                     left: `${groupStyle.left}%`,
                     fontSize: `${groupStyle.fontSize}px`,
                     color: groupStyle.color,
+                    fontWeight: groupStyle.fontWeight,
+                    transform: getTransform(groupStyle.textAlign),
+                    textAlign: groupStyle.textAlign
                   }}
                 >
                   กลุ่ม: {st.group}
@@ -287,7 +304,6 @@ function BadgeExportContent() {
         </div>
       </div>
 
-      {/* Print Styles */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
           body { 
@@ -297,10 +313,7 @@ function BadgeExportContent() {
           }
           .print\\:hidden { display: none !important; }
           .print\\:break-inside-avoid { break-inside: avoid !important; }
-          @page { 
-            margin: 5mm; 
-            size: A4 portrait;
-          }
+          @page { margin: 5mm; size: A4 portrait; }
         }
       `}} />
     </div>
