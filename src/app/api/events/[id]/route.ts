@@ -59,7 +59,7 @@ export async function PUT(
       data: {
         ...rest,
         ...(start_date ? { start_date: new Date(start_date) } : {}),
-        ...(end_date ? { end_date: new Date(end_date) } : {}),
+        ...(end_date ? { end_date: new Date(new Date(end_date).setHours(23, 59, 59, 999)) } : {}),
         ...(is_active !== undefined ? { is_active } : {}),
       },
     })

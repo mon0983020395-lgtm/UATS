@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...rest,
         start_date: new Date(start_date),
-        end_date: new Date(end_date),
+        end_date: new Date(new Date(end_date).setHours(23, 59, 59, 999)),
         is_active,
       },
     })

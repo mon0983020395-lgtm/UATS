@@ -75,15 +75,24 @@ export async function POST(request: NextRequest) {
 
     // 1. Find active event to associate with this scan
     const now = new Date()
-    const activeEvent = await prisma.meditationEvent.findFirst({
-      where: {
-        is_active: true,
-        start_date: { lte: now },
-        end_date: { gte: now },
-      },
+    // Prioritize event with is_active = true
+    let activeEvent = await prisma.meditationEvent.findFirst({
+      where: { is_active: true },
+      orderBy: { updated_at: 'desc' },
     })
 
-    // 2. Find active session for this event (allowing scan 30 mins before start and 30 mins after end)
+    // If no event marked active, fallback to current date range
+    if (!activeEvent) {
+      activeEvent = await prisma.meditationEvent.findFirst({
+        where: {
+          start_date: { lte: now },
+          end_date: { gte: now },
+        },
+        orderBy: { updated_at: 'desc' },
+      })
+    }
+
+    // 2. Find active session for this event (allowing scan 45 mins before start and 45 mins after end)
     let activeSession = null
     let is_late = false
     
@@ -91,11 +100,19 @@ export async function POST(request: NextRequest) {
       activeSession = await prisma.eventSession.findFirst({
         where: {
           event_id: activeEvent.id,
-          start_time: { lte: new Date(now.getTime() + 30 * 60000) },
-          end_time: { gte: new Date(now.getTime() - 30 * 60000) },
+          start_time: { lte: new Date(now.getTime() + 45 * 60000) },
+          end_time: { gte: new Date(now.getTime() - 45 * 60000) },
         },
-        orderBy: { start_time: 'asc' } // prioritize earlier session if overlap
+        orderBy: { start_time: 'asc' }
       })
+
+      // If no session is currently inside the window, check if there's any session for this event today
+      if (!activeSession) {
+        activeSession = await prisma.eventSession.findFirst({
+          where: { event_id: activeEvent.id },
+          orderBy: { start_time: 'desc' }
+        })
+      }
     }
 
     // 3. Determine scan type: Strict Session Binding & Auto-Checkout
